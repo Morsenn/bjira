@@ -9,6 +9,8 @@ python = "^3.9"
 keyring = "^25.2.1"
 jira = "^3.8.0"
 GitPython = "^3.1.27"
+jira2markdown = "^0.5"
+markdown-analysis = "^0.1.5"
 
 [tool.poetry.dev-dependencies]
 

@@ -59,6 +59,10 @@ bjira setpass
 ### Использовать
 
 ```shell script
+~ » bjira subtasks 123456                                   # Создать подзадачи для PORTFOLIO-123456 на основе найденной в описании таблицы
+
+~ » bjira subtasks 123456 --dryrun                          # Посмотреть, что будет сделано при запуске команды без dryrun
+
 ~ » bjira create -s 'xmlback' -m 'NEW TASK NAME'            # HH задача "[xmlback] NEW TASK NAME"
 
 ~ » bjira create -m 'NEW TASK NAME'                         # HH задача "NEW TASK NAME"
@@ -68,6 +72,8 @@ bjira setpass
 ~ » bjira create -m 'NEW TASK NAME' -d 'description' -l 'label-1, label-2'        # HH задача "NEW TASK NAME" с описанием "description" и тэгами "label-1, label-2"
 
 ~ » bjira create -p 12345 -s 'xmlback' -m 'NEW TASK NAME' -sp 0.5   # HH задача "[xmlback] NEW TASK NAME" на 0.5sp прилинкованная к PORTFOLIO-12345
+
+~ » bjira create -m 'NEW TASK NAME' -sh S                   # HH задача "NEW TASK NAME" с оценкой в майках S
 
 ~ » bjira create at -m 'NEW TASK NAME'                      # AT задача "[at] NEW TASK NAME"
 
