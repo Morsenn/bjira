@@ -69,6 +69,8 @@ bjira setpass
 
 ~ » bjira create -p 12345 -s 'xmlback' -m 'NEW TASK NAME' -sp 0.5   # HH задача "[xmlback] NEW TASK NAME" на 0.5sp прилинкованная к PORTFOLIO-12345
 
+~ » bjira create -m 'NEW TASK NAME' -sh S                   # HH задача "NEW TASK NAME" с оценкой в майках S
+
 ~ » bjira create at -m 'NEW TASK NAME'                      # AT задача "[at] NEW TASK NAME"
 
 ~ » bjira create at -p 12345 -m 'NEW TASK NAME'             # AT задача "[at] NEW TASK NAME" прилинкованная к PORTFOLIO-12345

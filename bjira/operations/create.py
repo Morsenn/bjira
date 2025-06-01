@@ -49,6 +49,7 @@ class Operation(BJiraOperation):
         parser.add_argument('-m', dest='message', default=None, help='task name')
         parser.add_argument('-t', dest='team', default=None, help='team to assign task')
         parser.add_argument('-sp', dest='sp', default=None, help='task storypoints, example: 0.5')
+        parser.add_argument('-sh', dest='shirt', default=None, help='task T-Shirts')
         parser.add_argument('-l', dest='labels', default=None, help='сomma-separated list of labels')
         parser.add_argument(
             '--check', dest='check', default=False, action='store_true', help='check existing task before'
@@ -104,6 +105,13 @@ class Operation(BJiraOperation):
                     fields['customfield_10961'] = {'value': team}
                 else:
                     fields['customfield_34238'] = [{'value': team}]
+
+            shirt = args.shirt
+            if shirt is not None:
+                if proj_id == HH_PROJECT_ID:
+                    fields['customfield_23911'] = {'value': args.shirt}  # HH T-Shirt
+                else:
+                    fields['customfield_23613'] = {'value': args.shirt}  # PORTFOLIO T-Shirt
 
             fields['customfield_11212'] = float(args.sp) if args.sp else None  # Story Points
 
