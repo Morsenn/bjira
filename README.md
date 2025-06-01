@@ -6,33 +6,33 @@
 ### Глобально (может не установиться без sudo, в зависимости от используемого python-а)
 
 ```shell
-python -m pip install git+ssh://git@github.com/bokshitsky/bjira.git@master
+python -m pip install git+ssh://git@github.com/Morsenn/bjira.git@master
 ```
 
 ### Через [pipx](https://github.com/pypa/pipx)
 
 ```shell
-pipx install 'git+ssh://git@github.com/bokshitsky/bjira.git@master'
+pipx install 'git+ssh://git@github.com/Morsenn/bjira.git@master'
 ```
 
 ### В .venv с вызовом через simlink
 
 ```shell
-python -m venv bjira_venv && bjira_venv/bin/python -m pip install 'git+ssh://git@github.com/bokshitsky/bjira.git@master'
+python -m venv bjira_venv && bjira_venv/bin/python -m pip install 'git+ssh://git@github.com/Morsenn/bjira.git@master'
 sudo ln -s `pwd`/bjira_venv/bin/bjira /usr/local/bin/bjira
 ```
 
 ### В .venv с вызовом через simlink в локальном checkout-е репы (удобно для разработки самой bjira)
 
 ```shell
-git clone git@github.com:bokshitsky/bjira.git && cd bjira && poetry install
+git clone git@github.com:Morsenn/bjira.git && cd bjira && poetry install
 sudo ln -s `pwd`/.venv/bin/bjira /usr/local/bin/bjira
 ```
 
 ### В .venv с вызовом через alias
 
 ```shell
-python -m venv bjira_venv && bjira_venv/bin/python -m pip install 'git+ssh://git@github.com/bokshitsky/bjira.git@master'
+python -m venv bjira_venv && bjira_venv/bin/python -m pip install 'git+ssh://git@github.com/Morsenn/bjira.git@master'
 echo "alias bjira=$PWD/bjira_venv/bin/bjira" >> ~/.zshrc
 ```
 
