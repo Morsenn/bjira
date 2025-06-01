@@ -1,10 +1,23 @@
 import json
+from decimal import Decimal
 from pathlib import Path
 
 import keyring
 from jira import JIRA
 
 from bjira.utils import JIRA_SERVICE
+
+DEFAULT_SHIRTS_MAPPING = {
+    '0': '0.1',
+    'XS': '0.4',
+    'S': '1',
+    'S+': '1',
+    'M': '2.5',
+    'L': '4',
+    'XL': '4',
+    'XXL': '4'
+}
+SHIRTS_ORDER = ['0', 'XS', 'S', 'S+', 'M', 'L', 'XL', 'XXL']
 
 
 class BJiraOperation:
@@ -36,3 +49,7 @@ class BJiraOperation:
     def get_task_url(self, task_name):
         host = self.get_config()['host']
         return f'{host}/browse/{task_name}'
+
+    def get_shirts_mapping(self):
+        mapping = self.get_config().get('shirts', DEFAULT_SHIRTS_MAPPING)
+        return {shirt: Decimal(mapping[shirt]) for shirt in mapping}
