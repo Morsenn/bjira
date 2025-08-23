@@ -2,9 +2,8 @@ import re
 from decimal import Decimal
 
 from jira import Issue
-from mrkdwn_analysis import MarkdownAnalyzer
-from jira2markdown import convert as convert_to_markdown
 from argparse import Namespace
+from bs4 import BeautifulSoup
 
 from bjira.operations import BJiraOperation, SHIRTS_ORDER
 from bjira.operations.create import Operation as CreateOperation
@@ -39,10 +38,11 @@ def _make_task_name_to_task_mapping(tasks) -> dict[str, Issue]:
 
 
 def _find_decomposition_table(portfolio: Issue):
+    html_formatted_description = portfolio.renderedFields.description
+    print('Конвертируем jira-разметку в описании портфеля в markdown')
+
     print('Ищем таблицы в описании портфеля. Это может занять несколько секунд...')
-    found_tables = (MarkdownAnalyzer
-                    .from_string(convert_to_markdown(portfolio.get_field(DESCRIPTION_FIELD)))
-                    .identify_tables())['Table']
+    found_tables = _parse_tables(html_formatted_description)
     print(f'Найдено {len(found_tables)} таблиц')
 
     for table in found_tables:
@@ -54,6 +54,28 @@ def _find_decomposition_table(portfolio: Issue):
         else:
             print(f'Пропускаем таблицу с заголовками {raw_header}')
     print('Таблица с декомпозицией не найдена')
+
+def _parse_tables(html: str):
+    tables = []
+    parsed_html = BeautifulSoup(html, 'html.parser')
+
+    for table_body in parsed_html.find_all('tbody'):
+        table = {}
+        table_rows = table_body.find_all('tr')
+
+        first_row = [] if len(table_rows) == 0 else table_rows[0]
+        headers = first_row.find_all('th')
+        if len(headers) == 0:
+            headers = first_row.find_all('td')
+        table['header'] = [header.text for header in headers]
+
+        result_rows = []
+        for row in table_rows[1::]:
+            result_rows.append([cell.text for cell in row.find_all('td')])
+        table['rows'] = result_rows
+        tables.append(table)
+
+    return tables
 
 
 def _find_task_prefix(task_title : str):
@@ -119,7 +141,7 @@ class Operation(BJiraOperation):
         self.portfolio_id = parse_portfolio_task(args.portfolio)
         jira_api = self.get_jira_api()
 
-        portfolio = jira_api.issue(self.portfolio_id)
+        portfolio = jira_api.issue(self.portfolio_id, expand='renderedFields')
         self.decomposition_table = _find_decomposition_table(portfolio)
         self.linked_task_name_to_task = _make_task_name_to_task_mapping(portfolio.get_field('issuelinks'))
         self.header = list(map(_sanitize_text, self.decomposition_table['header']))
@@ -178,7 +200,7 @@ class Operation(BJiraOperation):
 
         result = CreateOperation()._create_new_task(Namespace(**creation_args))
         if not args.dryrun:
-            print(f'Задача {title} успешно создана - {self.get_task_url(result.key)}')
+            print(f'Задача {title} успешно создана - {self.get_task_url(result.task.key)}')
 
     def _add_story_point_and_shirt(self, task_dict):
         if task_dict is None:
