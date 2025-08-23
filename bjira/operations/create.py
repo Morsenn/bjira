@@ -1,4 +1,7 @@
+import re
+
 from bjira.operations import BJiraOperation
+from bjira.operations.tax import DEFAULT_TAX_FIELDS
 from bjira.utils import parse_portfolio_task
 
 PORTFOLIO_PROJECT_ID = 'PORTFOLIO'
@@ -15,6 +18,7 @@ TASK_MAPPING = {
     'release': ('182', 'EXP'),
 }
 
+JQL_ESCAPE_PATTERN = r'([\]\["])'
 
 def _get_project_issue_type(args):
     return TASK_MAPPING.get(args.task_type.lower())
@@ -32,6 +36,9 @@ def _get_task_message(args):
     if args.task_type == 'release':
         return f'{args.service}={args.version}'
     return _get_prefix(args) + args.message
+
+def escape_jql(jql_string: str) -> str:
+    return re.sub(JQL_ESCAPE_PATTERN, r"\\\\\1", jql_string)
 
 
 class Operation(BJiraOperation):
@@ -57,6 +64,7 @@ class Operation(BJiraOperation):
         parser.add_argument(
             '--dryrun', dest='dryrun', default=False, action='store_true', help='just show params and exit'
         )
+        parser.add_argument('--tax', dest='tax', default=False, action='store_true', help='fill default tax galochkas')
         parser.set_defaults(func=self._create_new_task)
 
     def _create_new_task(self, args):
@@ -68,14 +76,14 @@ class Operation(BJiraOperation):
 
         if args.check:
             jira_api = self.get_jira_api()
-            escaped = task_message.replace('"', '\"')
-            query = f'summary ~ "{escaped}"'
+            escaped = escape_jql(task_message)
+            query = f"""summary ~ '{escaped}'"""
             print(f'checking task {query}')
             found_issues = jira_api.search_issues(query, maxResults=10)
             for issue in found_issues:
                 if issue.fields.summary.lower() == task_message.lower():
                     print(f'found existing task: {issue.permalink()} {issue.fields.summary}')
-                    return
+                    return None
 
         print(f'creating task "{task_message}"')
 
@@ -117,10 +125,12 @@ class Operation(BJiraOperation):
 
         if args.task_type == 'release':
             fields['customfield_28411'] = f'{args.service}: {args.version}'  # Application
+        if args.tax:
+            fields.update(DEFAULT_TAX_FIELDS)
 
         if args.dryrun:
             print(fields)
-            return
+            return None
 
         task = jira_api.create_issue(prefetch=True, fields=fields)
         print(self.get_task_url(task.key))
