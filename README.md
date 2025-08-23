@@ -63,6 +63,8 @@ bjira setpass
 
 ~ » bjira subtasks 123456 --dryrun                          # Посмотреть, что будет сделано при запуске команды без dryrun
 
+~ » bjira branch hhru                                       # Создать ветку (или перейти на неё, если уже существует) в git для задачи jira с hhru в названии 
+
 ~ » bjira create -s 'xmlback' -m 'NEW TASK NAME'            # HH задача "[xmlback] NEW TASK NAME"
 
 ~ » bjira create -m 'NEW TASK NAME'                         # HH задача "NEW TASK NAME"
