@@ -57,6 +57,7 @@ bjira setpass
 ```
 
 ### Использовать
+Подробнее про subtasks - [subtasks.md](docs/subtasks.md)
 
 ```shell script
 ~ » bjira subtasks 123456                                   # Создать подзадачи для PORTFOLIO-123456 на основе найденной в описании таблицы
