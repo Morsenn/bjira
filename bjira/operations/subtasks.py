@@ -179,6 +179,7 @@ class Operation(BJiraOperation):
             return
 
         creation_args = {
+            'tax': False,
             'task_type': _define_task_type(_find_task_prefix(title)),
             'service': None,
             'portfolio': self.portfolio_id,
