@@ -22,7 +22,8 @@ HEADER_FIELD_MAPPING = {
     SHIRT_HEADER: SHIRT_FIELD,
     DESCRIPTION_HEADER: DESCRIPTION_FIELD
 }
-
+# Извлекает текст между [ и ]
+PREFIX_PATTERN = r'\[(.*?)\]'
 
 def _sanitize_text(text: str) -> str:
     # Удаляем всё, кроме цифр и русских и английских букв
@@ -39,7 +40,6 @@ def _make_task_name_to_task_mapping(tasks) -> dict[str, Issue]:
 
 def _find_decomposition_table(portfolio: Issue):
     html_formatted_description = portfolio.renderedFields.description
-    print('Конвертируем jira-разметку в описании портфеля в markdown')
 
     print('Ищем таблицы в описании портфеля. Это может занять несколько секунд...')
     found_tables = _parse_tables(html_formatted_description)
@@ -79,19 +79,24 @@ def _parse_tables(html: str):
 
 
 def _find_task_prefix(task_title : str):
-    # Извлекает текст между [ и ]
-    pattern = r'\[(.*?)\]'
-    matches = re.findall(pattern, task_title)
+    matches = re.findall(PREFIX_PATTERN, task_title)
     if len(matches) != 0:
         return matches[0]
 
 
-def _define_task_type(task_prefix: str) -> str:
+def _define_task_type(task_title: str) -> str:
+    task_prefix = _find_task_prefix(task_title)
     if task_prefix is None:
         return 'hh'
     if _sanitize_text(task_prefix) in ['hhautotests', 'at', 'autotests', 'autotest', 'hhautotest']:
         return 'at'
     return 'hh'
+
+def _prepare_title(title: str) -> str:
+    # create.py adds this prefix
+    if _define_task_type(title) == 'at':
+        return re.sub(PREFIX_PATTERN, '', title, 1).strip()
+    return title
 
 
 def _format_shirts_summary_string(shirt_to_count_in_portfolio: dict[str, int]) -> str:
@@ -116,22 +121,14 @@ class Operation(BJiraOperation):
             dest='portfolio', help='portfolio id'
         )
         parser.add_argument(
-            '--skip-check', '-s', dest='skip_check', help="don't check tasks exist before creation", nargs='?',
-            default=False
+            '--skip-check', '-sc', dest='skip_check', help="don't check tasks exist before creation", action='store_true'
         )
         parser.add_argument(
-            '--no-swimlane', '-nsl', dest='no_swimlane', help="don't create swimlane for portfolio", nargs='?',
-            default=False
+            '--skip-storypoints', '-ssp', dest='skip_storypoints', help="don't set storypoints and T-shirts in portfolio", action='store_true'
         )
         parser.add_argument(
-            '--board', '-b', dest='board', help='board id for swimlane', nargs='?'
+            '--skip-description', '-sd', dest='skip_description', help="don't change description in portfolio", action='store_true'
         )
-        parser.add_argument(  # Not implemented
-            '--position', '-p',
-            dest='position',
-            help='swimlane position on board',
-            nargs='?',
-            default=0)
         parser.add_argument(
             '--dryrun', dest='dryrun', default=False, action='store_true', help='just show params and exit'
         )
@@ -150,19 +147,23 @@ class Operation(BJiraOperation):
             self._create_task(row, args)
 
         portfolio_update_fields = {}
-        if self.story_points_sum != 0:
+        if not args.skip_storypoints and self.story_points_sum != 0:
             print(f'Adding story points to portfolio: {self.story_points_sum} SP')
             portfolio_update_fields['customfield_11212'] = self.story_points_sum.__float__()  # PORTFOLIO SP
 
         shirts_summary = _format_shirts_summary_string(self.portfolio_shirts)
         if shirts_summary != '':
-            print(f'Adding shirts to portfolio: {shirts_summary}')
-            portfolio_update_fields['customfield_23613'] = shirts_summary  # PORTFOLIO T-Shirts
-            portfolio_update_fields[DESCRIPTION_FIELD] = (
-                    portfolio.get_field(DESCRIPTION_FIELD) + '\r\n' + f'{shirts_summary} = {self.story_points_sum} SP'
-            )
+            if not args.skip_storypoints:
+                print(f'Adding T-shirts to portfolio: {shirts_summary}')
+                portfolio_update_fields['customfield_23613'] = shirts_summary  # PORTFOLIO T-Shirts
+            if not args.skip_description:
+                summary_for_description = f'{shirts_summary} = {self.story_points_sum} SP'
+                print(f'Adding summary to the tail of portfolio description: {summary_for_description}')
+                portfolio_update_fields[DESCRIPTION_FIELD] = (
+                        portfolio.get_field(DESCRIPTION_FIELD) + '\r\n' + summary_for_description
+                )
 
-        if args.dryrun:
+        if args.dryrun or not portfolio_update_fields:
             print(f'Fields for portfolio update: {portfolio_update_fields}')
             return
         portfolio.update(fields=portfolio_update_fields)
@@ -172,20 +173,19 @@ class Operation(BJiraOperation):
         self._add_story_point_and_shirt(task_dict)
         title = task_dict[TITLE_HEADER]
 
-        task_already_exists = ((args.skip_check is not None)
-                               and _sanitize_text(title) in self.linked_task_name_to_task)
+        task_already_exists = (not args.skip_check and _sanitize_text(title) in self.linked_task_name_to_task)
         if task_already_exists:
             print(f'Пропускаем создание задачи "{title}", так как она уже существует')
             return
 
         creation_args = {
             'tax': False,
-            'task_type': _define_task_type(_find_task_prefix(title)),
+            'task_type': _define_task_type(title),
             'service': None,
             'portfolio': self.portfolio_id,
             'description': task_dict.get(DESCRIPTION_HEADER, None),
             'version': None,
-            'message': title,
+            'message': _prepare_title(title),
             'team': None,
             'sp': None,
             'labels': None,
