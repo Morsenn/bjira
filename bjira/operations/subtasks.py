@@ -6,7 +6,7 @@ from argparse import Namespace
 from bs4 import BeautifulSoup
 
 from bjira.operations import BJiraOperation, SHIRTS_ORDER
-from bjira.operations.create import Operation as CreateOperation
+from bjira.operations.create import Operation as CreateOperation, CreateDryRunResult
 from bjira.utils import parse_portfolio_task
 
 DESCRIPTION_FIELD = 'description'
@@ -143,8 +143,33 @@ class Operation(BJiraOperation):
         self.linked_task_name_to_task = _make_task_name_to_task_mapping(portfolio.get_field('issuelinks'))
         self.header = list(map(_sanitize_text, self.decomposition_table['header']))
 
+        fields_list = []
+        title_list = []
         for row in self.decomposition_table['rows']:
-            self._create_task(row, args)
+            result = self._prepare_task(row, args)
+            if result is not None:
+                fields_list.append(result.fields)
+                title_list.append(result.fields['summary'])
+
+        if fields_list:
+            if args.dryrun:
+                for i, fields in enumerate(fields_list):
+                    print(f'  {i + 1}. {title_list[i]}: {fields}')
+            else:
+                print(f'Создаём {len(fields_list)} задач через bulk API...')
+                results = jira_api.create_issues(field_list=fields_list, prefetch=False)
+                for i, result in enumerate(results):
+                    title = title_list[i]
+                    if result['status'] == 'Success':
+                        task = result['issue']
+                        print(f'Задача "{title}" успешно создана - {self.get_task_url(task.key)}')
+                        jira_api.create_issue_link(
+                            type='Inclusion',
+                            inwardIssue=self.portfolio_id,
+                            outwardIssue=task.key
+                        )
+                    else:
+                        print(f'Ошибка при создании задачи "{title}": {result["error"]}')
 
         portfolio_update_fields = {}
         if not args.skip_storypoints and self.story_points_sum != 0:
@@ -168,7 +193,7 @@ class Operation(BJiraOperation):
             return
         portfolio.update(fields=portfolio_update_fields)
 
-    def _create_task(self, row, args):
+    def _prepare_task(self, row, args):
         task_dict = {self.header[i]: row[i] for i in range(len(self.header))}
         self._add_story_point_and_shirt(task_dict)
         title = task_dict[TITLE_HEADER]
@@ -176,13 +201,13 @@ class Operation(BJiraOperation):
         task_already_exists = (not args.skip_check and _sanitize_text(title) in self.linked_task_name_to_task)
         if task_already_exists:
             print(f'Пропускаем создание задачи "{title}", так как она уже существует')
-            return
+            return None
 
         creation_args = {
             'tax': False,
             'task_type': _define_task_type(title),
             'service': None,
-            'portfolio': self.portfolio_id,
+            'portfolio': None,
             'description': task_dict.get(DESCRIPTION_HEADER, None),
             'version': None,
             'message': _prepare_title(title),
@@ -191,7 +216,7 @@ class Operation(BJiraOperation):
             'labels': None,
             'shirt': None,
             'check': False,
-            'dryrun': args.dryrun
+            'dryrun': True
         }
 
         try:
@@ -199,9 +224,7 @@ class Operation(BJiraOperation):
         except KeyError:
             pass
 
-        result = CreateOperation()._create_new_task(Namespace(**creation_args))
-        if not args.dryrun:
-            print(f'Задача {title} успешно создана - {self.get_task_url(result.task.key)}')
+        return CreateOperation()._create_new_task(Namespace(**creation_args))
 
     def _add_story_point_and_shirt(self, task_dict):
         if task_dict is None:

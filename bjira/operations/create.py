@@ -130,7 +130,7 @@ class Operation(BJiraOperation):
 
         if args.dryrun:
             print(fields)
-            return None
+            return CreateDryRunResult(fields)
 
         task = jira_api.create_issue(prefetch=True, fields=fields)
         print(self.get_task_url(task.key))
@@ -150,3 +150,8 @@ class Operation(BJiraOperation):
 class CreateResult:
     def __init__(self, task):
         self.task = task
+
+
+class CreateDryRunResult:
+    def __init__(self, fields: dict):
+        self.fields = fields
