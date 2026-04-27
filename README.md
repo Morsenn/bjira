@@ -116,3 +116,29 @@ bjira setpass
 ~ » bjira view                    # Открыть задачку в браузере, имя задачки взять из ветки гит-репозитория
 
 ```
+
+### Project-ops commands (fork extension)
+
+```shell script
+~ » bjira edit PORTFOLIO-53307 --due 2026-05-15                         # set Due Date
+~ » bjira edit PORTFOLIO-53307 --description-file ./spec.md --force     # overwrite description from file
+~ » bjira edit PORTFOLIO-53307 --label urgent --label q2-2026           # merge labels with existing
+~ » bjira edit PORTFOLIO-53307 --labels-clear                           # remove all labels
+~ » bjira edit PORTFOLIO-53307 --assignee i.moltyaninov                 # reassign
+~ » bjira edit PORTFOLIO-53307 --assignee none                          # unassign
+
+~ » bjira comment PORTFOLIO-53307 "готово, ждём ревью"                  # add comment
+~ » bjira comment PORTFOLIO-53307 --from-file ./update.md               # add comment from file
+
+~ » bjira comments PORTFOLIO-53307                                      # list last 5 comments
+~ » bjira comments PORTFOLIO-53307 -n 20                                # list last 20
+
+~ » bjira status PORTFOLIO-53307 "Development: In progress"             # transition (fuzzy match)
+~ » bjira status PORTFOLIO-53307 1501                                   # transition by id
+
+~ » bjira link PORTFOLIO-53307 Blocks PORTFOLIO-54000                   # link existing issues
+```
+
+**Exit codes:** `0` success, `2` arg error, `3` API error (auth/permission/not-found, ambiguous/unknown match). Pass `-v` for SDK debug logging.
+
+**Safety:** `--force` is required for `edit --description` and `edit --summary` when the existing value is non-empty. All other operations are additive or trivially reversible via Jira history.
