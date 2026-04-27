@@ -288,7 +288,9 @@ class Operation(BJiraOperation):
             }
 
             try:
-                creation_args['shirt'] = task_dict[SHIRT_HEADER].upper().strip()
+                shirt_value = task_dict[SHIRT_HEADER].upper().strip()
+                if shirt_value:
+                    creation_args['shirt'] = shirt_value
             except KeyError:
                 pass
 
